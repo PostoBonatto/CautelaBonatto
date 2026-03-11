@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CautelApp - Controle de Material Cautelar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #0ea5e9 100%);
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-ring {
+            position: relative;
+        }
+        
+        .pulse-ring::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.4);
+            animation: pulse 2s infinite;
+            z-index: -1;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        
+        .status-badge {
+            transition: all 0.3s ease;
+        }
+        
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        .sidebar-item {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: rgba(59, 130, 246, 0.2);
+            transition: width 0.3s ease;
+        }
+        
+        .sidebar-item:hover::before {
+            width: 100%;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 overflow-hidden">
+
+    <!-- Layout Principal -->
+    <div class="flex h-screen">
+        
+        <!-- Sidebar -->
+        <aside class="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg pulse-ring">
+                        <i class="fas fa-shield-alt text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl tracking-tight">CautelApp</h1>
+                        <p class="text-xs text-slate-400">Gestão de Material</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                <button onclick="showSection('dashboard')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-800 transition-colors group active-nav" id="nav-dashboard">
+                    <i class="fas fa-chart-line w-5 text-blue-400 group-hover:text-blue-300"></i>
+                    <span class="font-medium">Dashboard</span>
+                </button>
+                
+                <button onclick="showSection('cautelas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-800 transition-colors group" id="nav-cautelas">
+                    <i class="fas fa-clipboard-list w-5 text-emerald-400 group-hover:text-emerald-300"></i>
+                    <span class="font-medium">Cautelas</span>
+                    <span id="badge-cautelas" class="ml-auto bg-emerald-500 text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                
+                <button onclick="showSection('materiais')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-800 transition-colors group" id="nav-materiais">
+                    <i class="fas fa-boxes w-5 text-amber-400 group-hover:text-amber-300"></i>
+                    <span class="font-medium">Materiais</span>
+                </button>
+                
+                <button onclick="showSection('pessoas')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-800 transition-colors group" id="nav-pessoas">
+                    <i class="fas fa-users w-5 text-purple-400 group-hover:text-purple-300"></i>
+                    <span class="font-medium">Pessoas</span>
+                </button>
+                
+                <button onclick="showSection('relatorios')" class="sidebar-item w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-800 transition-colors group" id="nav-relatorios">
+                    <i class="fas fa-file-alt w-5 text-rose-400 group-hover:text-rose-300"></i>
+                    <span class="font-medium">Relatórios</span>
+                </button>
+            </nav>
+            
+            <div class="p-4 border-t border-slate-800">
+                <div class="glass-effect rounded-lg p-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                            AD
+                        </div>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium">Admin User</p>
+                            <p class="text-xs text-slate-400">Administrador</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <main class="flex-1 flex flex-col overflow-hidden relative">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-8 py-4 flex justify-between items-center shadow-sm z-10">
+                <div>
+                    <h2 id="page-title" class="text-2xl font-bold text-gray-800">Dashboard</h2>
+                    <p id="page-subtitle" class="text-sm text-gray-500 mt-1">Visão geral do sistema</p>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Buscar..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus w-64 transition-all">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    
+                    <button onclick="openModal('novaCautela')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <i class="fas fa-plus"></i>
+                        <span>Nova Cautela</span>
+                    </button>
+                    
+                    <button class="relative p-2 text-gray-600 hover:text-gray-800 transition-colors">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Área de Conteúdo -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-8 bg-gray-50">
+                
+                <!-- Dashboard Section -->
+                <section id="dashboard-section" class="space-y-6 slide-in">
+                    <!-- Cards de Estatísticas -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500 mb-1">Total de Materiais</p>
+                                    <h3 class="text-3xl font-bold text-gray-800" id="stat-total-materiais">0</h3>
+                                    <p class="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>12% este mês</span>
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-box text-blue-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500 mb-1">Cautelas Ativas</p>
+                                    <h3 class="text-3xl font-bold text-gray-800" id="stat-cautelas-ativas">0</h3>
+                                    <p class="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        <span>Aguardando devolução</span>
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-clipboard-check text-amber-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500 mb-1">Atrasados</p>
+                                    <h3 class="text-3xl font-bold text-red-600" id="stat-atrasados">0</h3>
+                                    <p class="text-xs text-red-600 mt-2 flex items-center gap-1">
+                                        <i class="fas fa-clock"></i>
+                                        <span>Urgente</span>
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-red-50 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 card-hover">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500 mb-1">Taxa de Devolução</p>
+                                    <h3 class="text-3xl font-bold text-gray-800">98.5%</h3>
+                                    <p class="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+                                        <i class="fas fa-check-circle"></i>
+                                        <span>Excelente</span>
+                                    </p>
+                                </div>
+                                <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-chart-pie text-emerald-600 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos e Atividades Recentes -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-lg text-gray-800">Movimentação Mensal</h3>
+                                <select class="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:border-blue-500">
+                                    <option>Últimos 6 meses</option>
+                                    <option>Este ano</option>
+                                </select>
+                            </div>
+                            <canvas id="movimentacaoChart" height="100"></canvas>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">Atividades Recentes</h3>
+                            <div class="space-y-4" id="atividades-recentes">
+                                <!-- Preenchido via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alertas -->
+                    <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <i class="fas fa-bell text-amber-600 text-xl"></i>
+                            <h3 class="font-bold text-amber-900">Alertas de Vencimento</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="alertas-container">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cautelas Section -->
+                <section id="cautelas-section" class="hidden space-y-6 slide-in">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div class="flex gap-2">
+                                <button onclick="filterCautelas('todos')" class="px-4 py-2 rounded-lg bg-blue-100 text-blue-700 font-medium text-sm hover:bg-blue-200 transition-colors filter-btn active" data-filter="todos">Todos</button>
+                                <button onclick="filterCautelas('ativos')" class="px-4 py-2 rounded-lg text-gray-600 font-medium text-sm hover:bg-gray-100 transition-colors filter-btn" data-filter="ativos">Ativos</button>
+                                <button onclick="filterCautelas('atrasados')" class="px-4 py-2 rounded-lg text-gray-600 font-medium text-sm hover:bg-gray-100 transition-colors filter-btn" data-filter="atrasados">Atrasados</button>
+                                <button onclick="filterCautelas('devolvidos')" class="px-4 py-2 rounded-lg text-gray-600 font-medium text-sm hover:bg-gray-100 transition-colors filter-btn" data-filter="devolvidos">Devolvidos</button>
+                            </div>
+                            <button onclick="exportData()" class="text-gray-600 hover:text-gray-800 flex items-center gap-2 text-sm font-medium">
+                                <i class="fas fa-download"></i>
+                                Exportar
+                            </button>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-100">
+                                    <tr>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Responsável</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Material</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Data Saída</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Previsão</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th class="text-left py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cautelas-table-body" class="divide-y divide-gray-100">
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Materiais Section -->
+                <section id="materiais-section" class="hidden space-y-6 slide-in">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h4 class="font-semibold text-gray-700 mb-4">Adicionar Novo Material</h4>
+                            <div class="space-y-3">
+                                <input type="text" id="novo-material-nome" placeholder="Nome do material" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                                <input type="text" id="novo-material-categoria" placeholder="Categoria" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                                <input type="number" id="novo-material-quantidade" placeholder="Quantidade" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                                <button onclick="addMaterial()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-plus mr-2"></i>Adicionar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-6 border-b border-gray-100">
+                                <h3 class="font-bold text-lg text-gray-800">Catálogo de Materiais</h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase">Item</th>
+                                            <th class="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase">Categoria</th>
+                                            <th class="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase">Total</th>
+                                            <th class="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase">Disponível</th>
+                                            <th class="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="materiais-table-body" class="divide-y divide-gray-100">
+                                        <!-- Preenchido via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Pessoas Section -->
+                <section id="pessoas-section" class="hidden space-y-6 slide-in">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-lg text-gray-800">Cadastro de Pessoas</h3>
+                            <button onclick="openModal('novaPessoa')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+                                <i class="fas fa-user-plus"></i>
+                                Nova Pessoa
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="pessoas-grid">
+                            <!-- Preenchido via JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Relatórios Section -->
+                <section id="relatorios-section" class="hidden space-y-6 slide-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">Materiais Mais Cautelados</h3>
+                            <canvas id="topMateriaisChart"></canvas>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4">Status das Cautelas</h3>
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="font-bold text-lg text-gray-800 mb-4">Histórico Completo</h3>
+                        <div class="flex gap-4 mb-4">
+                            <input type="date" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                            <span class="self-center text-gray-500">até</span>
+                            <input type="date" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500">
+                            <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors">
+                                Gerar Relatório
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Nova Cautela -->
+    <div id="modal-novaCautela" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all scale-100">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                <h3 class="text-xl font-bold text-gray-800">Nova Cautela</h3>
+                <button onclick="closeModal('novaCautela')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Responsável</label>
+                        <select id="cautela-responsavel" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Material</label>
+                        <select id="cautela-material" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Quantidade</label>
+                        <input type="number" id="cautela-quantidade" min="1" value="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Data de Saída</label>
+                        <input type="date" id="cautela-data-saida" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Previsão de Retorno</label>
+                        <input type="date" id="cautela-data-retorno" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-gray-700">Finalidade</label>
+                        <select id="cautela-finalidade" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                            <option value="operacional">Operacional</option>
+                            <option value="treinamento">Treinamento</option>
+                            <option value="manutencao">Manutenção</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-700">Observações</label>
+                    <textarea id="cautela-observacoes" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus resize-none"></textarea>
+                </div>
+            </div>
+            
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3 sticky bottom-0 bg-white">
+                <button onclick="closeModal('novaCautela')" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                    Cancelar
+                </button>
+                <button onclick="salvarCautela()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium shadow-lg hover:shadow-xl">
+                    Confirmar Cautela
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nova Pessoa -->
+    <div id="modal-novaPessoa" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800">Cadastrar Pessoa</h3>
+                <button onclick="closeModal('novaPessoa')" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-700">Nome Completo</label>
+                    <input type="text" id="pessoa-nome" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-700">Matrícula/ID</label>
+                    <input type="text" id="pessoa-matricula" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-700">Função/Setor</label>
+                    <input type="text" id="pessoa-funcao" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-gray-700">Contato</label>
+                    <input type="text" id="pessoa-contato" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 input-focus">
+                </div>
+            </div>
+            
+            <div class="p-6 border-t border-gray-100 flex justify-end gap-3">
+                <button onclick="closeModal('novaPessoa')" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium">
+                    Cancelar
+                </button>
+                <button onclick="salvarPessoa()" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div class="bg-slate-800 text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3">
+            <i id="toast-icon" class="fas fa-check-circle text-emerald-400"></i>
+            <span id="toast-message">Operação realizada com sucesso!</span>
+        </div>
+    </div>
+
+    <script>
+        // Dados do Sistema (Simulando um banco de dados)
+        let dados = {
+            materiais: [
+                { id: 1, nome: 'Rádio Comunicador HT', categoria: 'Comunicação', total: 10, disponivel: 7, imagem: 'fa-walkie-talkie' },
+                { id: 2, nome: 'Colete Balístico', categoria: 'Proteção', total: 15, disponivel: 12, imagem: 'fa-shield-alt' },
+                { id: 3, nome: 'Lanterna Tática', categoria: 'Iluminação', total: 20, disponivel: 18, imagem: 'fa-lightbulb' },
+                { id: 4, nome: 'Câmera Corporal', categoria: 'Vigilância', total: 8, disponivel: 5, imagem: 'fa-video' },
+                { id: 5, nome: 'Algema', categoria: 'Restrição', total: 25, disponivel: 22, imagem: 'fa-lock' },
+                { id: 6, nome: 'Bastão Defesa', categoria: 'Defesa', total: 12, disponivel: 10, imagem: 'fa-gavel' }
+            ],
+            pessoas: [
+                { id: 1, nome: 'Sgt. Silva', matricula: '12345', funcao: 'Operacional', contato: '(11) 98765-4321', foto: 'https://ui-avatars.com/api/?name=Sgt+Silva&background=0D8ABC&color=fff' },
+                { id: 2, nome: 'Cb. Santos', matricula: '12346', funcao: 'Operacional', contato: '(11) 98765-4322', foto: 'https://ui-avatars.com/api/?name=Cb+Santos&background=6366f1&color=fff' },
+                { id: 3, nome: 'Sd. Oliveira', matricula: '12347', funcao: 'Apoio', contato: '(11) 98765-4323', foto: 'https://ui-avatars.com/api/?name=Sd+Oliveira&background=10b981&color=fff' },
+                { id: 4, nome: 'Ten. Costa', matricula: '12348', funcao: 'Comando', contato: '(11) 98765-4324', foto: 'https://ui-avatars.com/api/?name=Ten+Costa&background=f59e0b&color=fff' }
+            ],
+            cautelas: [
+                { 
+                    id: 1001, 
+                    responsavelId: 1, 
+                    materialId: 1, 
+                    quantidade: 2, 
+                    dataSaida: '2024-03-10', 
+                    dataRetornoPrevista: '2024-03-12', 
+                    dataRetornoReal: null,
+                    status: 'ativo',
+                    finalidade: 'operacional',
+                    observacoes: 'Operação noturna'
+                },
+                { 
+                    id: 1002, 
+                    responsavelId: 2, 
+                    materialId: 2, 
+                    quantidade: 1, 
+                    dataSaida: '2024-03-08', 
+                    dataRetornoPrevista: '2024-03-09', 
+                    dataRetornoReal: null,
+                    status: 'atrasado',
+                    finalidade: 'treinamento',
+                    observacoes: 'Treinamento tático'
+                },
+                { 
+                    id: 1003, 
+                    responsavelId: 3, 
+                    materialId: 4, 
+                    quantidade: 1, 
+                    dataSaida: '2024-03-05', 
+                    dataRetornoPrevista: '2024-03-06', 
+                    dataRetornoReal: '2024-03-06',
+                    status: 'devolvido',
+                    finalidade: 'operacional',
+                    observacoes: 'Patrulhamento'
+                }
+            ]
+        };
+
+        let currentFilter = 'todos';
+        let charts = {};
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            updateDashboard();
+            renderCautelas();
+            renderMateriais();
+            renderPessoas();
+            populateSelects();
+            initCharts();
+            
+            // Set today's date
+            document.getElementById('cautela-data-saida').valueAsDate = new Date();
+        }
+
+        // Navegação
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.remove('hidden');
+            
+            // Update navigation
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('bg-slate-800', 'border-l-4', 'border-blue-500');
+            });
+            document.getElementById('nav-' + sectionName).classList.add('bg-slate-800');
+            
+            // Update header
+            const titles = {
+                'dashboard': { title: 'Dashboard', subtitle: 'Visão geral do sistema' },
+                'cautelas': { title: 'Controle de Cautelas', subtitle: 'Gerenciamento de empréstimos' },
+                'materiais': { title: 'Catálogo de Materiais', subtitle: 'Inventário e disponibilidade' },
+                'pessoas': { title: 'Cadastro de Pessoas', subtitle: 'Responsáveis e usuários' },
+                'relatorios': { title: 'Relatórios', subtitle: 'Análises e estatísticas' }
+            };
+            
+            document.getElementById('page-title').textContent = titles[sectionName].title;
+            document.getElementById('page-subtitle').textContent = titles[sectionName].subtitle;
+            
+            // Refresh charts if entering reports
+            if (sectionName === 'relatorios') {
+                updateReportCharts();
+            }
+        }
+
+        // Dashboard Updates
+        function updateDashboard() {
+            // Stats
+            document.getElementById('stat-total-materiais').textContent = dados.materiais.reduce((acc, m) => acc + m.total, 0);
+            
+            const ativas = dados.cautelas.filter(c => c.status === 'ativo' || c.status === 'atrasado').length;
+            document.getElementById('stat-cautelas-ativas').textContent = ativas;
+            
+            const atrasados = dados.cautelas.filter(c => c.status === 'atrasado').length;
+            document.getElementById('stat-atrasados').textContent = atrasados;
+            
+            // Update badge
+            const badge = document.getElementById('badge-cautelas');
+            if (ativas > 0) {
+                badge.textContent = ativas;
+                badge.classList.remove('hidden');
+            }
+            
+            // Recent activities
+            const atividadesContainer = document.getElementById('atividades-recentes');
+            atividadesContainer.innerHTML = '';
+            
+            const recentes = [...dados.cautelas].sort((a, b) => b.id - a.id).slice(0, 5);
+            
+            recentes.forEach(cautela => {
+                const pessoa = dados.pessoas.find(p => p.id === cautela.responsavelId);
+                const material = dados.materiais.find(m => m.id === cautela.materialId);
+                
+                let icon, color, text;
+                if (cautela.status === 'devolvido') {
+                    icon = 'fa-check-circle';
+                    color = 'text-emerald-500';
+                    text = 'Devolvido';
+                } else if (cautela.status === 'atrasado') {
+                    icon = 'fa-exclamation-circle';
+                    color = 'text-red-500';
+                    text = 'Atrasado';
+                } else {
+                    icon = 'fa-clock';
+                    color = 'text-amber-500';
+                    text = 'Em uso';
+                }
+                
+                atividadesContainer.innerHTML += `
+                    <div class="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <i class="fas ${icon} ${color} text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-800 truncate">${pessoa.nome}</p>
+                            <p class="text-xs text-gray-500 truncate">${material.nome} • ${text}</p>
+                            <p class="text-xs text-gray-400 mt-1">${formatDate(cautela.dataSaida)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Alerts
+            const alertasContainer = document.getElementById('alertas-container');
+            alertasContainer.innerHTML = '';
+            
+            const hoje = new Date();
+            const proximosVencimentos = dados.cautelas.filter(c => {
+                if (c.status !== 'ativo') return false;
+                const dataPrevista = new Date(c.dataRetornoPrevista);
+                const diff = Math.ceil((dataPrevista - hoje) / (1000 * 60 * 60 * 24));
+                return diff <= 2 && diff >= 0;
+            });
+            
+            if (proximosVencimentos.length === 0) {
+                alertasContainer.innerHTML = '<p class="text-amber-700 col-span-3">Nenhum vencimento próximo.</p>';
+            } else {
+                proximosVencimentos.forEach(cautela => {
+                    const pessoa = dados.pessoas.find(p => p.id === cautela.responsavelId);
+                    const material = dados.materiais.find(m => m.id === cautela.materialId);
+                    const dataPrevista = new Date(cautela.dataRetornoPrevista);
+                    const diff = Math.ceil((dataPrevista - hoje) / (1000 * 60 * 60 * 24));
+                    
+                    alertasContainer.innerHTML += `
+                        <div class="bg-white rounded-lg p-4 border border-amber-200 shadow-sm">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-clock text-amber-600"></i>
+                                <span class="font-semibold text-amber-900 text-sm">${diff === 0 ? 'Vence hoje' : diff === 1 ? 'Vence amanhã' : `Vence em ${diff} dias`}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 font-medium">${material.nome}</p>
+                            <p class="text-xs text-gray-500">${pessoa.nome}</p>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Cautelas Management
+        function renderCautelas() {
+            const tbody = document.getElementById('cautelas-table-body');
+            tbody.innerHTML = '';
+            
+            let filtered = dados.cautelas;
+            if (currentFilter !== 'todos') {
+                filtered = dados.cautelas.filter(c => c.status === currentFilter);
+            }
+            
+            filtered.sort((a, b) => b.id - a.id).forEach(cautela => {
+                const pessoa = dados.pessoas.find(p => p.id === cautela.responsavelId);
+                const material = dados.materiais.find(m => m.id === cautela.materialId);
+                
+                let statusClass, statusText, statusIcon;
+                switch(cautela.status) {
+                    case 'ativo':
+                        statusClass = 'bg-blue-100 text-blue-700 border-blue-200';
+                        statusText = 'Ativo';
+                        statusIcon = 'fa-clock';
+                        break;
+                    case 'atrasado':
+                        statusClass = 'bg-red-100 text-red-700 border-red-200';
+                        statusText = 'Atrasado';
+                        statusIcon = 'fa-exclamation-triangle';
+                        break;
+                    case 'devolvido':
+                        statusClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                        statusText = 'Devolvido';
+                        statusIcon = 'fa-check';
+                        break;
+                }
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 transition-colors';
+                row.innerHTML = `
+                    <td class="py-4 px-6 text-sm font-medium text-gray-900">#${cautela.id}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                ${pessoa.nome.charAt(0)}
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">${pessoa.nome}</p>
+                                <p class="text-xs text-gray-500">${pessoa.matricula}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <p class="text-sm font-medium text-gray-900">${material.nome}</p>
+                        <p class="text-xs text-gray-500">Qtd: ${cautela.quantidade}</p>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-gray-600">${formatDate(cautela.dataSaida)}</td>
+                    <td class="py-4 px-6 text-sm text-gray-600">${formatDate(cautela.dataRetornoPrevista)}</td>
+                    <td class="py-4 px-6">
+                        <span class="status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusClass}">
+                            <i class="fas ${statusIcon} text-xs"></i>
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center gap-2">
+                            ${cautela.status !== 'devolvido' ? `
+                                <button onclick="registrarDevolucao(${cautela.id})" class="text-emerald-600 hover:text-emerald-800 p-2 hover:bg-emerald-50 rounded-lg transition-colors" title="Registrar Devolução">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                                <button onclick="prorrogarPrazo(${cautela.id})" class="text-amber-600 hover:text-amber-800 p-2 hover:bg-amber-50 rounded-lg transition-colors" title="Prorrogar">
+                                    <i class="fas fa-calendar-plus"></i>
+                                </button>
+                            ` : ''}
+                            <button onclick="verDetalhes(${cautela.id})" class="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Ver Detalhes">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterCautelas(filter) {
+            currentFilter = filter;
+            
+            // Update buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('bg-blue-100', 'text-blue-700');
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                } else {
+                    btn.classList.remove('bg-blue-100', 'text-blue-700');
+                    btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+                }
+            });
+            
+            renderCautelas();
+        }
+
+        function registrarDevolucao(cautelaId) {
+            const cautela = dados.cautelas.find(c => c.id === cautelaId);
+            if (!cautela) return;
+            
+            cautela.status = 'devolvido';
+            cautela.dataRetornoReal = new Date().toISOString().split('T')[0];
+            
+            // Update material availability
+            const material = dados.materiais.find(m => m.id === cautela.materialId);
+            material.disponivel += cautela.quantidade;
+            
+            showToast('Devolução registrada com sucesso!', 'success');
+            updateDashboard();
+            renderCautelas();
+            renderMateriais();
+        }
+
+        function prorrogarPrazo(cautelaId) {
+            const novaData = prompt('Nova data de retorno (YYYY-MM-DD):');
+            if (novaData && /^\d{4}-\d{2}-\d{2}$/.test(novaData)) {
+                const cautela = dados.cautelas.find(c => c.id === cautelaId);
+                cautela.dataRetornoPrevista = novaData;
+                cautela.status = 'ativo'; // Remove atraso se existir
+                
+                showToast('Prazo prorrogado com sucesso!', 'success');
+                renderCautelas();
+                updateDashboard();
+            }
+        }
+
+        function verDetalhes(cautelaId) {
+            const cautela = dados.cautelas.find(c => c.id === cautelaId);
+            const pessoa = dados.pessoas.find(p => p.id === cautela.responsavelId);
+            const material = dados.materiais.find(m => m.id === cautela.materialId);
+            
+            alert(`
+Detalhes da Cautela #${cautela.id}
+
+Responsável: ${pessoa.nome} (${pessoa.matricula})
+Material: ${material.nome}
+Quantidade: ${cautela.quantidade}
+Data Saída: ${formatDate(cautela.dataSaida)}
+Previsão: ${formatDate(cautela.dataRetornoPrevista)}
+${cautela.dataRetornoReal ? 'Devolvido em: ' + formatDate(cautela.dataRetornoReal) : ''}
+Finalidade: ${cautela.finalidade}
+Observações: ${cautela.observacoes || 'Nenhuma'}
+            `);
+        }
+
+        // Materiais Management
+        function renderMateriais() {
+            const tbody = document.getElementById('materiais-table-body');
+            tbody.innerHTML = '';
+            
+            dados.materiais.forEach(material => {
+                const percentual = (material.disponivel / material.total) * 100;
+                let statusColor = percentual > 50 ? 'bg-emerald-500' : percentual > 20 ? 'bg-amber-500' : 'bg-red-500';
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="py-3 px-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas ${material.imagem} text-gray-600"></i>
+                                </div>
+                                <span class="font-medium text-gray-900">${material.nome}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-6 text-sm text-gray-600">${material.categoria}</td>
+                        <td class="py-3 px-6 text-sm text-gray-900 font-medium">${material.total}</td>
+                        <td class="py-3 px-6">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium ${material.disponivel === 0 ? 'text-red-600' : 'text-gray-900'}">${material.disponivel}</span>
+                                <div class="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="${statusColor} h-full rounded-full" style="width: ${percentual}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 px-6">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${material.disponivel > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
+                                ${material.disponivel > 0 ? 'Disponível' : 'Indisponível'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function addMaterial() {
+            const nome = document.getElementById('novo-material-nome').value;
+            const categoria = document.getElementById('novo-material-categoria').value;
+            const quantidade = parseInt(document.getElementById('novo-material-quantidade').value);
+            
+            if (!nome || !categoria || !quantidade) {
+                showToast('Preencha todos os campos!', 'error');
+                return;
+            }
+            
+            const novoMaterial = {
+                id: dados.materiais.length + 1,
+                nome: nome,
+                categoria: categoria,
+                total: quantidade,
+                disponivel: quantidade,
+                imagem: 'fa-box'
+            };
+            
+            dados.materiais.push(novoMaterial);
+            
+            // Clear inputs
+            document.getElementById('novo-material-nome').value = '';
+            document.getElementById('novo-material-categoria').value = '';
+            document.getElementById('novo-material-quantidade').value = '';
+            
+            showToast('Material adicionado com sucesso!', 'success');
+            renderMateriais();
+            populateSelects();
+            updateDashboard();
+        }
+
+        // Pessoas Management
+        function renderPessoas() {
+            const container = document.getElementById('pessoas-grid');
+            container.innerHTML = '';
+            
+            dados.pessoas.forEach(pessoa => {
+                const cautelasAtivas = dados.cautelas.filter(c => c.responsavelId === pessoa.id && c.status !== 'devolvido').length;
+                
+                container.innerHTML += `
+                    <div class="bg-gray-50 rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer group">
+                        <div class="flex items-start justify-between mb-3">
+                            <img src="${pessoa.foto}" alt="${pessoa.nome}" class="w-12 h-12 rounded-full">
+                            <span class="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
+                                ${cautelasAtivas} cautela${cautelasAtivas !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <h4 class="font-bold text-gray-800 mb-1">${pessoa.nome}</h4>
+                        <p class="text-sm text-gray-500 mb-2">${pessoa.funcao}</p>
+                        <div class="text-xs text-gray-400 space-y-1">
+                            <p><i class="fas fa-id-card mr-1"></i> ${pessoa.matricula}</p>
+                            <p><i class="fas fa-phone mr-1"></i> ${pessoa.contato}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function salvarPessoa() {
+            const nome = document.getElementById('pessoa-nome').value;
+            const matricula = document.getElementById('pessoa-matricula').value;
+            const funcao = document.getElementById('pessoa-funcao').value;
+            const contato = document.getElementById('pessoa-contato').value;
+            
+            if (!nome || !matricula) {
+                showToast('Nome e matrícula são obrigatórios!', 'error');
+                return;
+            }
+            
+            const novaPessoa = {
+                id: dados.pessoas.length + 1,
+                nome: nome,
+                matricula: matricula,
+                funcao: funcao || 'Não especificado',
+                contato: contato || '',
+                foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=random&color=fff`
+            };
+            
+            dados.pessoas.push(novaPessoa);
+            
+            closeModal('novaPessoa');
+            showToast('Pessoa cadastrada com sucesso!', 'success');
+            renderPessoas();
+            populateSelects();
+            
+            // Clear inputs
+            document.getElementById('pessoa-nome').value = '';
+            document.getElementById('pessoa-matricula').value = '';
+            document.getElementById('pessoa-funcao').value = '';
+            document.getElementById('pessoa-contato').value = '';
+        }
+
+        // Modal Functions
+        function openModal(modalName) {
+            document.getElementById('modal-' + modalName).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalName) {
+            document.getElementById('modal-' + modalName).classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function populateSelects() {
+            const responsavelSelect = document.getElementById('cautela-responsavel');
+            const materialSelect = document.getElementById('cautela-material');
+            
+            // Clear existing options except first
+            responsavelSelect.innerHTML = '<option value="">Selecione...</option>';
+            materialSelect.innerHTML = '<option value="">Selecione...</option>';
+            
+            dados.pessoas.forEach(pessoa => {
+                responsavelSelect.innerHTML += `<option value="${pessoa.id}">${pessoa.nome} (${pessoa.matricula})</option>`;
+            });
+            
+            dados.materiais.forEach(material => {
+                if (material.disponivel > 0) {
+                    materialSelect.innerHTML += `<option value="${material.id}">${material.nome} (Disp: ${material.disponivel})</option>`;
+                }
+            });
+        }
+
+        function salvarCautela() {
+            const responsavelId = parseInt(document.getElementById('cautela-responsavel').value);
+            const materialId = parseInt(document.getElementById('cautela-material').value);
+            const quantidade = parseInt(document.getElementById('cautela-quantidade').value);
+            const dataSaida = document.getElementById('cautela-data-saida').value;
+            const dataRetorno = document.getElementById('cautela-data-retorno').value;
+            const finalidade = document.getElementById('cautela-finalidade').value;
+            const observacoes = document.getElementById('cautela-observacoes').value;
+            
+            if (!responsavelId || !materialId || !dataSaida || !dataRetorno) {
+                showToast('Preencha todos os campos obrigatórios!', 'error');
+                return;
+            }
+            
+            const material = dados.materiais.find(m => m.id === materialId);
+            if (quantidade > material.disponivel) {
+                showToast('Quantidade indisponível!', 'error');
+                return;
+            }
+            
+            const novaCautela = {
+                id: 1000 + dados.cautelas.length + 1,
+                responsavelId: responsavelId,
+                materialId: materialId,
+                quantidade: quantidade,
+                dataSaida: dataSaida,
+                dataRetornoPrevista: dataRetorno,
+                dataRetornoReal: null,
+                status: 'ativo',
+                finalidade: finalidade,
+                observacoes: observacoes
+            };
+            
+            // Check if overdue
+            const hoje = new Date();
+            const dataPrevista = new Date(dataRetorno);
+            if (dataPrevista < hoje) {
+                novaCautela.status = 'atrasado';
+            }
+            
+            dados.cautelas.push(novaCautela);
+            material.disponivel -= quantidade;
+            
+            closeModal('novaCautela');
+            showToast('Cautela registrada com sucesso!', 'success');
+            
+            // Reset form
+            document.getElementById('cautela-responsavel').value = '';
+            document.getElementById('cautela-material').value = '';
+            document.getElementById('cautela-quantidade').value = '1';
+            document.getElementById('cautela-data-retorno').value = '';
+            document.getElementById('cautela-observacoes').value = '';
+            
+            updateDashboard();
+            renderCautelas();
+            renderMateriais();
+            populateSelects();
+        }
+
+        // Charts
+        function initCharts() {
+            const ctx1 = document.getElementById('movimentacaoChart').getContext('2d');
+            charts.movimentacao = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                    datasets: [{
+                        label: 'Cautelas',
+                        data: [12, 19, 15, 25, 22, 30],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Devoluções',
+                        data: [10, 15, 14, 20, 21, 28],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateReportCharts() {
+            // Top materials chart
+            const ctx2 = document.getElementById('topMateriaisChart');
+            if (ctx2) {
+                if (charts.topMateriais) charts.topMateriais.destroy();
+                
+                const materialCount = {};
+                dados.cautelas.forEach(c => {
+                    const mat = dados.materiais.find(m => m.id === c.materialId);
+                    materialCount[mat.nome] = (materialCount[mat.nome] || 0) + c.quantidade;
+                });
+                
+                charts.topMateriais = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(materialCount).slice(0, 5),
+                        datasets: [{
+                            label: 'Quantidade Cautelada',
+                            data: Object.values(materialCount).slice(0, 5),
+                            backgroundColor: [
+                                'rgba(59, 130, 246, 0.8)',
+                                'rgba(16, 185, 129, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(139, 92, 246, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Status chart
+            const ctx3 = document.getElementById('statusChart');
+            if (ctx3) {
+                if (charts.status) charts.status.destroy();
+                
+                const statusCount = {
+                    'Ativo': dados.cautelas.filter(c => c.status === 'ativo').length,
+                    'Atrasado': dados.cautelas.filter(c => c.status === 'atrasado').length,
+                    'Devolvido': dados.cautelas.filter(c => c.status === 'devolvido').length
+                };
+                
+                charts.status = new Chart(ctx3, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusCount),
+                        datasets: [{
+                            data: Object.values(statusCount),
+                            backgroundColor: [
+                                '#3b82f6',
+                                '#ef4444',
+                                '#10b981'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Utilities
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msg = document.getElementById('toast-message');
+            
+            msg.textContent = message;
+            
+            if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle text-red-400';
+            } else {
+                icon.className = 'fas fa-check-circle text-emerald-400';
+            }
+            
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function exportData() {
+            showToast('Relatório exportado com sucesso!', 'success');
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-backdrop')) {
+                event.target.classList.add('hidden');
+            }
+        }
+
+        // Check overdue items periodically
+        setInterval(() => {
+            const hoje = new Date();
+            dados.cautelas.forEach(cautela => {
+                if (cautela.status === 'ativo') {
+                    const dataPrevista = new Date(cautela.dataRetornoPrevista);
+                    if (dataPrevista < hoje) {
+                        cautela.status = 'atrasado';
+                    }
+                }
+            });
+            updateDashboard();
+            renderCautelas();
+        }, 60000); // Check every minute
+    </script>
+</body>
+</html>
